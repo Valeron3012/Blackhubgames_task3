@@ -2,7 +2,7 @@
 #include <cmath>
 #include <algorithm>
 
-// struct Point { float x = 0.f; float y = 0.f; }; // Уже объявлен в условии
+// struct Point { float x = 0.f; float y = 0.f; }; // Предоставлено в условии
 
 void TestPoints(
     const std::vector<Point>& polygon,
@@ -11,18 +11,17 @@ void TestPoints(
 {
     const size_t n = polygon.size();
     result.resize(points.size());
-
+    
     if (n < 3) {
         std::fill(result.begin(), result.end(), 0);
         return;
     }
 
-    // Точность 1e-7, как требуется
-    constexpr double EPS = 1e-7;
+    // Требуемая точность
+    constexpr double EPS  = 1e-7;
     constexpr double EPS2 = EPS * EPS;
 
     for (size_t k = 0; k < points.size(); ++k) {
-        // Используем double для высокой точности вычислений
         double px = static_cast<double>(points[k].x);
         double py = static_cast<double>(points[k].y);
 
@@ -35,17 +34,15 @@ void TestPoints(
             double x2 = static_cast<double>(polygon[j].x);
             double y2 = static_cast<double>(polygon[j].y);
 
-            // --- 1. Проверка принадлежности границе (с точностью EPS) ---
+            // --- 1. Проверка границы (ребро или вершина) ---
             double dx = x2 - x1;
             double dy = y2 - y1;
             double len2 = dx * dx + dy * dy;
 
-            // Если ребро не вырождено
             if (len2 > 1e-12) {
                 // Проекция точки на прямую ребра
                 double t = ((px - x1) * dx + (py - y1) * dy) / len2;
-                // Ограничиваем проекцию отрезком [0, 1]
-                t = (t < 0.0) ? 0.0 : ((t > 1.0) ? 1.0 : t);
+                t = (t < 0.0) ? 0.0 : ((t > 1.0) ? 1.0 : t); // Clamp to [0,1]
                 
                 double cx = x1 + t * dx;
                 double cy = y1 + t * dy;
@@ -56,7 +53,7 @@ void TestPoints(
                     break; // Точка на границе -> сразу считаем входящей
                 }
             } else {
-                // Вырожденное ребро (точка)
+                // Вырожденное ребро (совпадающие вершины)
                 double dist2 = (px - x1) * (px - x1) + (py - y1) * (py - y1);
                 if (dist2 <= EPS2) {
                     onBoundary = true;
@@ -64,33 +61,23 @@ void TestPoints(
                 }
             }
 
-            // --- 2. Алгоритм Winding Number (Non-Zero Rule) ---
-            // Этот алгоритм корректно работает с "вывернутыми" многоугольниками,
-            // дырками и самопересечениями.
-            
-            // Пересечение вверх (снизу вверх)
-            if (y1 <= py) {
-                if (y2 > py) {
-                    // Проверяем, находится ли точка слева от вектора ребра
-                    // Используем умножение вместо деления для скорости и точности
-                    // (px - x1) * (y2 - y1) < (py - y1) * (x2 - x1)
-                    if ((px - x1) * (y2 - y1) < (py - y1) * (x2 - x1)) {
-                        winding_number++;
-                    }
+            // --- 2. Winding Number (Non-Zero Rule) ---
+            // Пересечение вверх
+            if (y1 <= py && y2 > py) {
+                // Точка слева от вектора (x1,y1)->(x2,y2)?
+                if ((px - x1) * (y2 - y1) < (py - y1) * (x2 - x1)) {
+                    winding_number++;
                 }
             }
-            // Пересечение вниз (сверху вниз)
-            else { // y1 > py
-                if (y2 <= py) {
-                    // Для нисходящего пересечения знак неравенства меняется
-                    if ((px - x1) * (y2 - y1) > (py - y1) * (x2 - x1)) {
-                        winding_number--;
-                    }
+            // Пересечение вниз
+            else if (y1 > py && y2 <= py) {
+                // Точка справа от вектора?
+                if ((px - x1) * (y2 - y1) > (py - y1) * (x2 - x1)) {
+                    winding_number--;
                 }
             }
         }
 
-        // Точка внутри, если она на границе ИЛИ winding number != 0
         result[k] = (onBoundary || winding_number != 0) ? 1 : 0;
     }
 }
