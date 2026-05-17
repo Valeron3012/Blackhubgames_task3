@@ -2,7 +2,7 @@
 #include <cmath>
 #include <algorithm>
 
-// struct Point { float x = 0.f; float y = 0.f; }; // Предоставлено в условии
+// struct Point { float x = 0.f; float y = 0.f; }; // Уже объявлен в условии
 
 void TestPoints(
     const std::vector<Point>& polygon,
@@ -17,11 +17,12 @@ void TestPoints(
         return;
     }
 
-    // Требуемая точность
+    // Требуемая точность 1e-7
     constexpr double EPS  = 1e-7;
     constexpr double EPS2 = EPS * EPS;
 
     for (size_t k = 0; k < points.size(); ++k) {
+        // Используем double для высокой точности вычислений
         double px = static_cast<double>(points[k].x);
         double py = static_cast<double>(points[k].y);
 
@@ -62,22 +63,27 @@ void TestPoints(
             }
 
             // --- 2. Winding Number (Non-Zero Rule) ---
-            // Пересечение вверх
+            // Этот алгоритм корректно работает с "вывернутыми" многоугольниками,
+            // дырками и самопересечениями.
+            
+            // Пересечение вверх (снизу вверх)
+            // Условие y1 <= py < y2 гарантирует, что вершина учитывается только один раз
             if (y1 <= py && y2 > py) {
-                // Точка слева от вектора (x1,y1)->(x2,y2)?
+                // Проверяем, находится ли точка слева от вектора ребра
                 if ((px - x1) * (y2 - y1) < (py - y1) * (x2 - x1)) {
                     winding_number++;
                 }
             }
-            // Пересечение вниз
+            // Пересечение вниз (сверху вниз)
             else if (y1 > py && y2 <= py) {
-                // Точка справа от вектора?
+                // Проверяем, находится ли точка справа от вектора ребра
                 if ((px - x1) * (y2 - y1) > (py - y1) * (x2 - x1)) {
                     winding_number--;
                 }
             }
         }
 
+        // Точка внутри, если она на границе ИЛИ winding number != 0
         result[k] = (onBoundary || winding_number != 0) ? 1 : 0;
     }
 }
